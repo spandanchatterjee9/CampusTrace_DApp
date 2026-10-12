@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTrace | Decentralised Campus Lost & Found</title>
+  <meta name="description" content="Privacy-aware, decentralised campus lost-and-found dApp on Ethereum / Ganache.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- Ethers.js v6 UMD CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+  <!-- Contract Configuration & ABI -->
+  <script src="contractConfig.js"></script>
+</head>
+<body>
+  <div class="background-decorations">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">CampusTrace</h1>
+          <p class="brand-subtitle">Decentralised & Privacy-Aware Campus Lost & Found Registry</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="networkBadge" class="badge badge-network hidden">
+          <span class="status-dot"></span>
+          <span id="networkName">Disconnected</span>
+        </div>
+
+        <button id="connectWalletBtn" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon">
+            <rect width="20" height="14" x="2" y="5" rx="2"/>
+            <line x1="2" x2="22" y1="10" y2="10"/>
+          </svg>
+          <span id="connectWalletText">Connect MetaMask</span>
+        </button>
+
+        <div id="walletDropdown" class="wallet-pill hidden">
+          <span class="avatar-circle"></span>
+          <span id="userAddressShort" class="font-mono">0x000...000</span>
+          <button id="copyAddressBtn" class="icon-btn" title="Copy Wallet Address">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contract Configuration Banner -->
+  <section class="container config-section">
+    <div class="card config-card">
+      <div class="config-header" id="toggleConfigBtn">
+        <div class="config-summary">
+          <span class="config-icon">⚙️</span>
+          <div>
+            <strong>Smart Contract Target:</strong>
+            <span id="activeContractDisplay" class="font-mono text-muted">Loading configuration...</span>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-ghost" id="editConfigBtn">Configure Target</button>
+      </div>
+
+      <div id="configDrawer" class="config-drawer hidden">
+        <div class="config-form-grid">
+          <div class="input-group">
+            <label for="cfgContractAddress">Deployed Contract Address (0x...):</label>
+            <input type="text" id="cfgContractAddress" placeholder="Paste Remix / Ganache deployed address" class="font-mono">
+            <small class="help-text">Obtained after deploying CampusTrace.sol in Remix or Ganache.</small>
+          </div>
+          <div class="config-actions">
+            <button type="button" id="saveContractConfigBtn" class="btn btn-primary btn-sm">Save & Connect</button>
+            <button type="button" id="resetContractConfigBtn" class="btn btn-secondary btn-sm">Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Alert System -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <main class="container main-layout">
+    <!-- Left Column: Report Creation Form & Feature Info -->
+    <section class="form-column">
+      <div class="card card-form">
+        <div class="card-header">
+          <h2>Create New Report</h2>
+          <p class="text-muted">Register a lost or found item with privacy-aware cryptographic claim verification.</p>
+        </div>
+
+        <form id="createReportForm">
+          <div class="form-group">
+            <label>Report Classification <span class="required">*</span></label>
+            <div class="segmented-control">
+              <label class="segment-option">
+                <input type="radio" name="reportType" value="0" checked>
+                <span class="segment-pill segment-lost">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-inline">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" x2="12" y1="8" y2="12"/>
+                    <line x1="12" x2="12.01" y1="16" y2="16"/>
+                  </svg>
+                  Lost Item
+                </span>
+              </label>
+              <label class="segment-option">
+                <input type="radio" name="reportType" value="1">
+                <span class="segment-pill segment-found">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-inline">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  Found Item
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label for="itemTitle">Item Title <span class="required">*</span></label>
+              <span class="char-count" id="titleCharCount">0/100</span>
+            </div>
+            <input type="text" id="itemTitle" maxlength="100" placeholder="e.g. Blue Hydro Flask / Scientific Calculator" required>
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label for="itemLocation">Campus Location <span class="required">*</span></label>
+              <span class="char-count" id="locCharCount">0/100</span>
+            </div>
+            <input type="text" id="itemLocation" maxlength="100" placeholder="e.g. Library 2nd Floor Quiet Zone, Table 14" required>
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label for="itemDescription">Detailed Description <span class="required">*</span></label>
+              <span class="char-count" id="descCharCount">0/500</span>
+            </div>
+            <textarea id="itemDescription" rows="3" maxlength="500" placeholder="Provide distinct physical details (color, stickers, brand). Do not include personal passwords or IDs." required></textarea>
+          </div>
+
+          <!-- Privacy-Aware Claim Verification Section -->
+          <div class="form-group verification-group">
+            <div class="verification-header">
+              <label for="claimSecret">
+                Privacy Claim Verification Secret <span class="required">*</span>
+              </label>
+              <button type="button" id="generateSecretBtn" class="btn btn-xs btn-ghost">🎲 Generate Random Secret</button>
+            </div>
+            <p class="help-text">
+              Enter a secret confirmation phrase (e.g., hidden serial number, private marks, or mutual code). 
+              <strong>Never stored in plaintext on-chain</strong> — only its keccak256 hash is registered. 
+              Keep this safe; you will need it to resolve the report.
+            </p>
+            <div class="secret-input-wrapper">
+              <input type="text" id="claimSecret" placeholder="e.g. Serial_HF92_BlueLid" required>
+              <button type="button" id="copySecretBtn" class="icon-btn" title="Copy Secret">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Hash Preview Box -->
+            <div class="hash-preview-card">
+              <div class="hash-label">
+                <span>Calculated keccak256 Hash (Registered On-Chain):</span>
+              </div>
+              <div id="hashPreviewDisplay" class="font-mono text-break">0x... (Type secret to preview)</div>
+            </div>
+          </div>
+
+          <button type="submit" id="submitReportBtn" class="btn btn-primary btn-block">
+            <span class="btn-spinner hidden" id="submitSpinner"></span>
+            <span id="submitBtnText">Publish Report to Blockchain</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Feature Note Card -->
+      <div class="card card-info">
+        <h3>🔐 Privacy & Security Architecture</h3>
+        <ul class="feature-notes">
+          <li>
+            <strong>Zero Plaintext Storage:</strong> Only the cryptographic hash (<code>keccak256</code>) of your claim verification phrase is committed to the blockchain.
+          </li>
+          <li>
+            <strong>Owner Access Control:</strong> Only the original report creator can invoke the resolution function.
+          </li>
+          <li>
+            <strong>Public Mempool Awareness:</strong> Resolving a report passes the secret in transaction calldata to settle the verification on-chain. Do not use reusable personal passwords.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Right Column: Reports Feed & Controls -->
+    <section class="feed-column">
+      <!-- Search and Filter Bar -->
+      <div class="feed-controls card">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-search">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Search by title, location, or description...">
+        </div>
+
+        <div class="filter-actions">
+          <select id="typeFilter" class="select-filter">
+            <option value="all">All Types</option>
+            <option value="0">Lost Items</option>
+            <option value="1">Found Items</option>
+          </select>
+
+          <select id="statusFilter" class="select-filter">
+            <option value="all">All Statuses</option>
+            <option value="0">Active Only</option>
+            <option value="1">Resolved Only</option>
+          </select>
+
+          <button id="refreshBtn" class="btn btn-secondary btn-icon" title="Refresh Reports from Blockchain">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="refreshIcon">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+              <path d="M16 21h5v-5"/>
+            </svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Feed Status / Summary -->
+      <div class="feed-summary">
+        <span id="reportsCountText">Loading reports...</span>
+        <div class="legend">
+          <span class="legend-item"><span class="dot dot-lost"></span> Lost</span>
+          <span class="legend-item"><span class="dot dot-found"></span> Found</span>
+          <span class="legend-item"><span class="dot dot-active"></span> Active</span>
+          <span class="legend-item"><span class="dot dot-resolved"></span> Resolved</span>
+        </div>
+      </div>
+
+      <!-- Reports List Container -->
+      <div id="reportsList" class="reports-grid">
+        <!-- Rendered dynamically by app.js -->
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Connecting to contract and fetching campus reports...</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Report Resolution Modal -->
+  <div id="resolutionModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Resolve Report #1</h3>
+        <button type="button" id="closeModalBtn" class="modal-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-item-preview" id="modalItemSummary">
+          <!-- Filled by JS -->
+        </div>
+
+        <form id="resolveReportForm">
+          <input type="hidden" id="resolveReportId" value="">
+          
+          <div class="form-group">
+            <label for="resolveSecretInput">
+              Verification Secret Passphrase <span class="required">*</span>
+            </label>
+            <input type="text" id="resolveSecretInput" placeholder="Enter the confidential secret phrase" required>
+            <small class="help-text">
+              The contract will hash this secret with <code>keccak256</code> and match it against the registered claim hash.
+            </small>
+          </div>
+
+          <div class="callout callout-warning">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-callout">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+              <line x1="12" x2="12" y1="9" y2="13"/>
+              <line x1="12" x2="12.01" y1="17" y2="17"/>
+            </svg>
+            <div>
+              <strong>Blockchain Verification Notice:</strong>
+              This transaction permanently marks the item as <strong>Resolved</strong> on-chain. Only the report creator can execute this resolution.
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" id="cancelModalBtn" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="confirmResolveBtn" class="btn btn-success">
+              <span class="btn-spinner hidden" id="resolveSpinner"></span>
+              <span id="resolveBtnText">Confirm & Resolve On-Chain</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <div>
+        <strong>CampusTrace DApp</strong> &bull; CSE4444 Blockchain Technology Assignment 2
+      </div>
+      <div class="footer-links">
+        <span>Solidity 0.8.20</span> &bull; 
+        <span>Ethers.js v6</span> &bull; 
+        <span>Ganache & Remix Compatible</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

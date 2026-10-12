@@ -1,0 +1,31 @@
+{
+  "name": "campustrace-dapp",
+  "version": "1.0.0",
+  "description": "Privacy-aware, decentralized campus lost-and-found registry on Ethereum / Ganache",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:ganache": "hardhat run scripts/deploy.js --network ganache",
+    "deploy:local": "hardhat run scripts/deploy.js --network hardhat",
+    "export-config": "node scripts/exportConfig.js",
+    "start": "npx serve frontend -p 3000"
+  },
+  "keywords": [
+    "solidity",
+    "blockchain",
+    "ethereum",
+    "ganache",
+    "remix",
+    "hardhat",
+    "dapp",
+    "cse4444"
+  ],
+  "author": "CampusTrace Team",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.29.1"
+  }
+}
