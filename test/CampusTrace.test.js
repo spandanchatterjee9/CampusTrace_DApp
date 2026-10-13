@@ -221,8 +221,8 @@ describe("CampusTrace Smart Contract", function () {
       );
     });
 
-    it("should revert getReport for nonexistent report ID", async function () {
-      await expect(campusTrace.getReport(99)).to.be.revertedWith(
+    it("should revert getReport for nonexistent report ID (such as ID 42)", async function () {
+      await expect(campusTrace.getReport(42)).to.be.revertedWith(
         "CampusTrace: Report does not exist"
       );
     });

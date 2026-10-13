@@ -262,7 +262,12 @@
     }
 
     try {
-      const runner = signer || provider;
+      let runner = signer || provider;
+      if (!runner) {
+        try {
+          runner = new ethers.JsonRpcProvider("http://127.0.0.1:7545");
+        } catch (_) {}
+      }
       contract = new ethers.Contract(targetAddress, window.CONTRACT_CONFIG.abi, runner);
       return true;
     } catch (err) {
@@ -431,9 +436,13 @@
     reportsCountText.textContent = "Fetching reports from blockchain...";
 
     try {
-      const runner = contract ? contract : new ethers.Contract(targetAddress, window.CONTRACT_CONFIG.abi, provider || new ethers.JsonRpcProvider("http://127.0.0.1:7545"));
+      let readContract = contract;
+      if (!readContract || !readContract.runner) {
+        const activeProvider = provider || new ethers.JsonRpcProvider("http://127.0.0.1:7545");
+        readContract = new ethers.Contract(targetAddress, window.CONTRACT_CONFIG.abi, activeProvider);
+      }
       
-      const rawReports = await runner.getAllReports();
+      const rawReports = await readContract.getAllReports();
 
       allReportsCache = rawReports.map((r) => ({
         id: Number(r.id),

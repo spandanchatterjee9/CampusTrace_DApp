@@ -3,8 +3,8 @@
 // Update CONTRACT_ADDRESS after deploying to Ganache or test network via Remix or Hardhat.
 
 const CONTRACT_CONFIG = {
-  // Update this with the deployed address on Ganache / Remix
-  address: "",
+  // Deployed address on Ganache via Remix & MetaMask
+  address: "0x3D0cf44665e15d944139019e8AA265CA2A25B7A7",
   // Ganache CLI usually defaults to 1337; Ganache GUI defaults to 5777; Hardhat is 31337
   expectedChainId: 1337,
   networkName: "Ganache Localhost (Chain ID: 1337 / 5777)",
