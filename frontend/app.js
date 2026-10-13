@@ -141,6 +141,75 @@
     }
   }
 
+  function updateNetworkBadgeUI(chainId) {
+    if (!chainId) {
+      networkBadge.classList.add("hidden");
+      return;
+    }
+
+    networkBadge.classList.remove("hidden");
+    const id = Number(chainId);
+    const isGanache = id === 1337 || id === 5777;
+
+    if (isGanache) {
+      networkBadge.classList.remove("wrong-network");
+      networkNameDisplay.textContent = getNetworkLabel(id);
+      networkBadge.title = `Connected to local Ganache network (Chain ID: ${id})`;
+    } else {
+      networkBadge.classList.add("wrong-network");
+      networkNameDisplay.innerHTML = `⚠️ ${getNetworkLabel(id)} (Click to switch to Ganache)`;
+      networkBadge.title = `MetaMask is on ${getNetworkLabel(id)}. Click to switch to Ganache (Chain ID 1337).`;
+    }
+  }
+
+  async function switchNetworkToGanache() {
+    if (!window.ethereum) {
+      showToast("MetaMask is required to switch networks.", "error");
+      return false;
+    }
+
+    const expectedId = (window.CONTRACT_CONFIG && window.CONTRACT_CONFIG.expectedChainId) || 1337;
+    const chainIdHex = "0x" + Number(expectedId).toString(16); // "0x539"
+    const rpcEndpoint = (window.CONTRACT_CONFIG && window.CONTRACT_CONFIG.rpcUrl) || "http://127.0.0.1:7545";
+
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: chainIdHex }],
+      });
+      showToast("Switched network to Ganache!", "success");
+      return true;
+    } catch (switchError) {
+      // Error code 4902 indicates that the chain has not been added to MetaMask
+      if (switchError.code === 4902 || (switchError.message && switchError.message.includes("wallet_addEthereumChain"))) {
+        try {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: chainIdHex,
+                chainName: "Ganache Localhost",
+                rpcUrls: [rpcEndpoint],
+                nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+              },
+            ],
+          });
+          showToast("Added and switched to Ganache network!", "success");
+          return true;
+        } catch (addError) {
+          showToast(`Failed to add Ganache to MetaMask: ${addError.message}`, "error");
+          return false;
+        }
+      } else if (switchError.code === 4001) {
+        showToast("Network switch rejected by user in MetaMask.", "error");
+        return false;
+      } else {
+        showToast(`Network switch error: ${switchError.message}`, "error");
+        return false;
+      }
+    }
+  }
+
   // --- Wallet Connection & Web3 Init ---
   async function initWeb3() {
     if (!window.ethereum) {
@@ -154,8 +223,7 @@
       const network = await provider.getNetwork();
       currentChainId = network.chainId;
 
-      networkBadge.classList.remove("hidden");
-      networkNameDisplay.textContent = getNetworkLabel(currentChainId);
+      updateNetworkBadgeUI(currentChainId);
 
       const accounts = await provider.listAccounts();
       if (accounts.length > 0) {
@@ -166,6 +234,11 @@
       }
 
       setupEthereumEvents();
+
+      if (Number(currentChainId) !== 1337 && Number(currentChainId) !== 5777) {
+        showToast(`Notice: MetaMask is on ${getNetworkLabel(currentChainId)}. Click the red network badge to switch to Ganache (1337).`, "info", 6000);
+      }
+
       return true;
     } catch (err) {
       console.error("Error initializing Web3:", err);
@@ -194,13 +267,18 @@
         const network = await provider.getNetwork();
         currentChainId = network.chainId;
 
-        networkBadge.classList.remove("hidden");
-        networkNameDisplay.textContent = getNetworkLabel(currentChainId);
-
+        updateNetworkBadgeUI(currentChainId);
         updateWalletUI(userAddress);
         initContractInstance();
+
+        if (Number(currentChainId) !== 1337 && Number(currentChainId) !== 5777) {
+          showToast(`MetaMask is connected to ${getNetworkLabel(currentChainId)}. Prompting switch to Ganache...`, "info", 5000);
+          await switchNetworkToGanache();
+        } else {
+          showToast("Connected to wallet successfully!", "success");
+        }
+
         await loadReports();
-        showToast("Connected to wallet successfully!", "success");
       }
     } catch (err) {
       console.error("Wallet connection error:", err);
@@ -334,6 +412,12 @@
       return;
     }
 
+    if (currentChainId && Number(currentChainId) !== 1337 && Number(currentChainId) !== 5777) {
+      showToast("MetaMask is on the wrong network. Switching to Ganache...", "error");
+      const switched = await switchNetworkToGanache();
+      if (!switched) return;
+    }
+
     const targetAddress = getTargetContractAddress();
     if (!targetAddress) {
       showToast("Please configure a deployed contract address first.", "error");
@@ -436,12 +520,16 @@
     reportsCountText.textContent = "Fetching reports from blockchain...";
 
     try {
-      let readContract = contract;
-      if (!readContract || !readContract.runner) {
-        const activeProvider = provider || new ethers.JsonRpcProvider("http://127.0.0.1:7545");
-        readContract = new ethers.Contract(targetAddress, window.CONTRACT_CONFIG.abi, activeProvider);
+      const rpcEndpoint = (window.CONTRACT_CONFIG && window.CONTRACT_CONFIG.rpcUrl) || "http://127.0.0.1:7545";
+      let readContract;
+
+      if (provider && (currentChainId === 1337n || currentChainId === 5777n)) {
+        readContract = new ethers.Contract(targetAddress, window.CONTRACT_CONFIG.abi, provider);
+      } else {
+        const ganacheProvider = new ethers.JsonRpcProvider(rpcEndpoint);
+        readContract = new ethers.Contract(targetAddress, window.CONTRACT_CONFIG.abi, ganacheProvider);
       }
-      
+
       const rawReports = await readContract.getAllReports();
 
       allReportsCache = rawReports.map((r) => ({
@@ -661,6 +749,12 @@
       return;
     }
 
+    if (currentChainId && Number(currentChainId) !== 1337 && Number(currentChainId) !== 5777) {
+      showToast("MetaMask is on the wrong network. Switching to Ganache...", "error");
+      const switched = await switchNetworkToGanache();
+      if (!switched) return;
+    }
+
     const reportId = Number(resolveReportIdInput.value);
     const secret = resolveSecretInput.value.trim();
 
@@ -743,6 +837,12 @@
   // --- Event Listeners Setup ---
   function setupEventListeners() {
     connectWalletBtn.addEventListener("click", connectWallet);
+
+    networkBadge.addEventListener("click", async () => {
+      if (networkBadge.classList.contains("wrong-network")) {
+        await switchNetworkToGanache();
+      }
+    });
 
     copyAddressBtn.addEventListener("click", () => {
       if (userAddress) {

@@ -329,6 +329,20 @@ body {
   background: rgba(16, 185, 129, 0.12);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.25);
+  transition: var(--transition);
+}
+
+.badge-network.wrong-network {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  cursor: pointer;
+}
+
+.badge-network.wrong-network:hover {
+  background: rgba(244, 63, 94, 0.25);
+  border-color: rgba(244, 63, 94, 0.6);
+  transform: translateY(-1px);
 }
 
 .status-dot {
@@ -337,6 +351,11 @@ body {
   border-radius: 50%;
   background: #10b981;
   box-shadow: 0 0 8px #10b981;
+}
+
+.badge-network.wrong-network .status-dot {
+  background: #f43f5e;
+  box-shadow: 0 0 8px #f43f5e;
 }
 
 .wallet-pill {
